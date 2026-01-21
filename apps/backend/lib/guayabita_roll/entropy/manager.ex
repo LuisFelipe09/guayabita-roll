@@ -228,6 +228,30 @@ defmodule GuayabitaRoll.Entropy.Manager do
   end
 
   @doc """
+  Marca un batch como "dispersing" (enviado a EigenDA, esperando confirmación).
+  """
+  def mark_batch_dispersing(%Batch{} = batch, request_id) do
+    batch
+    |> Ecto.Changeset.change(%{
+      status: "dispersing",
+      eigenda_blob_id: request_id
+    })
+    |> Repo.update()
+  end
+
+  @doc """
+  Lista los batches que están en estado "dispersing" (esperando confirmación de EigenDA).
+  """
+  def list_dispersing_batches do
+    query =
+      from b in Batch,
+        where: b.status == "dispersing",
+        order_by: [asc: b.inserted_at]
+
+    Repo.all(query)
+  end
+
+  @doc """
   Lista todos los batches con conteo de semillas por estado.
   """
   def list_batches do

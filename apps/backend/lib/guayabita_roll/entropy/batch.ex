@@ -29,7 +29,7 @@ defmodule GuayabitaRoll.Entropy.Batch do
     batch
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
-    |> validate_inclusion(:status, ["pending", "published", "expired"])
+    |> validate_inclusion(:status, ["pending", "dispersing", "published", "expired"])
     |> unique_constraint(:merkle_root)
   end
 

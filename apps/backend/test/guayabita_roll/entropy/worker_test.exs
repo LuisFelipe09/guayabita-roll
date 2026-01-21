@@ -17,8 +17,14 @@ defmodule GuayabitaRoll.Entropy.WorkerTest do
 
   test "automatically creates a batch when stock is low" do
     # Iniciamos el worker con un stock mínimo de 1 para forzar la creación de solo 1 lote
-    # y un batch_size pequeño para el test
-    opts = [min_stock: 1, batch_size: 16, check_interval: 1000, name: :test_worker_stock]
+    # y un batch_size pequeño para el test. Usamos el mock client.
+    opts = [
+      min_stock: 1, 
+      batch_size: 16, 
+      check_interval: 1000, 
+      name: :test_worker_stock,
+      eigenda_client: GuayabitaRoll.EigenDA.MockClient
+    ]
     
     # Capturamos el log para verificar que se dispara la acción
     assert capture_log(fn ->
@@ -41,8 +47,13 @@ defmodule GuayabitaRoll.Entropy.WorkerTest do
     {:ok, batch} = Manager.create_batch(16)
     assert batch.status == "pending"
 
-    # 2. Iniciamos el worker
-    opts = [min_stock: 0, check_interval: 100, name: :test_worker_sync]
+    # 2. Iniciamos el worker con mock client
+    opts = [
+      min_stock: 0, 
+      check_interval: 100, 
+      name: :test_worker_sync,
+      eigenda_client: GuayabitaRoll.EigenDA.MockClient
+    ]
     {:ok, pid} = Worker.start_link(opts)
     Ecto.Adapters.SQL.Sandbox.allow(GuayabitaRoll.Repo, self(), pid)
     
@@ -64,8 +75,14 @@ defmodule GuayabitaRoll.Entropy.WorkerTest do
     initial_count = Manager.total_available_seeds_count()
     assert initial_count == 32
 
-    # 2. Iniciamos el worker con min_stock bajo (16)
-    opts = [min_stock: 16, batch_size: 16, check_interval: 100, name: :test_worker_sufficient]
+    # 2. Iniciamos el worker con min_stock bajo (16) y mock client
+    opts = [
+      min_stock: 16, 
+      batch_size: 16, 
+      check_interval: 100, 
+      name: :test_worker_sufficient,
+      eigenda_client: GuayabitaRoll.EigenDA.MockClient
+    ]
     
     log = capture_log(fn ->
       {:ok, pid} = Worker.start_link(opts)
@@ -84,7 +101,13 @@ defmodule GuayabitaRoll.Entropy.WorkerTest do
 
   test "generates multiple batches when deficit is large" do
     # Con min_stock=50 y batch_size=16, si tenemos 0 necesitamos ceil(50/16)=4 batches
-    opts = [min_stock: 50, batch_size: 16, check_interval: 1000, name: :test_worker_multi]
+    opts = [
+      min_stock: 50, 
+      batch_size: 16, 
+      check_interval: 1000, 
+      name: :test_worker_multi,
+      eigenda_client: GuayabitaRoll.EigenDA.MockClient
+    ]
     
     log = capture_log(fn ->
       {:ok, pid} = Worker.start_link(opts)

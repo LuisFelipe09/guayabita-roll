@@ -4,7 +4,7 @@ defmodule GuayabitaRoll.Entropy.Worker do
   
   Responsabilidades:
   1. Garantizar Stock: Monitorea semillas disponibles y crea nuevos lotes si el stock es bajo.
-  2. Sincronización EigenDA: Detecta batches pendientes y los "publica" (mock) generando un blob_id.
+  2. Sincronización EigenDA: Detecta batches pendientes y los publica en EigenDA.
   """
   
   use GenServer
@@ -36,7 +36,8 @@ defmodule GuayabitaRoll.Entropy.Worker do
     {:ok, %{
       check_interval: interval,
       min_stock: Keyword.get(opts, :min_stock, @min_stock),
-      batch_size: Keyword.get(opts, :batch_size, @batch_size)
+      batch_size: Keyword.get(opts, :batch_size, @batch_size),
+      eigenda_client: Keyword.get(opts, :eigenda_client, GuayabitaRoll.EigenDA.Client)
     }}
   end
 
@@ -46,7 +47,7 @@ defmodule GuayabitaRoll.Entropy.Worker do
     guarantee_stock(state)
     
     # 2. Sincronizar con EigenDA
-    sync_with_eigenda()
+    sync_with_eigenda(state)
     
     # Re-programar
     schedule_check(state.check_interval)
@@ -83,24 +84,78 @@ defmodule GuayabitaRoll.Entropy.Worker do
     end
   end
 
-  defp sync_with_eigenda do
+  defp sync_with_eigenda(state) do
+    # Fase 1: Dispersar batches pendientes
+    disperse_pending_batches(state)
+    
+    # Fase 2: Confirmar batches que están siendo dispersados
+    confirm_dispersing_batches(state)
+  end
+
+  defp disperse_pending_batches(state) do
     pending_batches = Manager.list_pending_batches()
     
     if Enum.any?(pending_batches) do
-      Logger.info("[Entropy.Worker] Sincronizando #{length(pending_batches)} lotes con EigenDA...")
+      Logger.info("[Entropy.Worker] Dispersando #{length(pending_batches)} lote(s) pendiente(s)...")
       
       Enum.each(pending_batches, fn batch ->
-        # Aquí iría la llamada gRPC al Disperser de EigenDA
-        # Por ahora simulamos una respuesta exitosa
-        blob_id = "eigenda_blob_#{System.unique_integer([:positive, :monotonic])}"
+        data = Base.decode16!(batch.merkle_root, case: :lower)
         
-        case Manager.publish_batch(batch, blob_id) do
-          {:ok, _} ->
-            Logger.info("[Entropy.Worker] Batch #{batch.id} publicado en EigenDA (Blob ID: #{blob_id})")
+        case state.eigenda_client.disperse_blob(data) do
+          {:ok, request_id} ->
+            blob_id = Base.encode16(request_id)
+            
+            # Marcar como "dispersing" (en proceso de confirmación)
+            case Manager.mark_batch_dispersing(batch, blob_id) do
+              {:ok, _} ->
+                Logger.info("[Entropy.Worker] Batch #{batch.id} enviado a EigenDA. Request ID: #{blob_id}")
+              {:error, reason} ->
+                Logger.error("[Entropy.Worker] Error al marcar batch #{batch.id} como dispersing: #{inspect(reason)}")
+            end
+            
           {:error, reason} ->
-            Logger.error("[Entropy.Worker] Error al marcar batch #{batch.id} como publicado: #{inspect(reason)}")
+            Logger.error("[Entropy.Worker] Error al dispersar batch #{batch.id}: #{inspect(reason)}")
         end
       end)
     end
   end
+
+  defp confirm_dispersing_batches(state) do
+    dispersing_batches = Manager.list_dispersing_batches()
+    
+    if Enum.any?(dispersing_batches) do
+      Logger.info("[Entropy.Worker] Verificando confirmación de #{length(dispersing_batches)} lote(s)...")
+      
+      Enum.each(dispersing_batches, fn batch ->
+        # Decodificar el request_id almacenado
+        request_id = Base.decode16!(batch.eigenda_blob_id, case: :mixed)
+        
+        # Consultar estado (sin polling bloqueante - solo una consulta)
+        check_and_update_batch_status(state, batch, request_id)
+      end)
+    end
+  end
+
+  defp check_and_update_batch_status(state, batch, request_id) do
+    # Solo hacemos UNA consulta, no un polling completo
+    # El worker se ejecuta periódicamente, así que eventualmente se confirmará
+    case state.eigenda_client.get_blob_status(request_id) do
+      {:ok, _blob_info} ->
+        # CONFIRMED o FINALIZED - marcar como published
+        case Manager.publish_batch(batch, batch.eigenda_blob_id) do
+          {:ok, _} ->
+            Logger.info("[Entropy.Worker] Batch #{batch.id} CONFIRMADO en EigenDA!")
+          {:error, reason} ->
+            Logger.error("[Entropy.Worker] Error al marcar batch #{batch.id} como published: #{inspect(reason)}")
+        end
+        
+      {:error, :timeout} ->
+        Logger.debug("[Entropy.Worker] Batch #{batch.id} aún procesándose...")
+        
+      {:error, reason} ->
+        Logger.warning("[Entropy.Worker] Error al verificar batch #{batch.id}: #{inspect(reason)}")
+    end
+  end
 end
+
+
