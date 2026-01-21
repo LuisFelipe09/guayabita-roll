@@ -72,7 +72,7 @@ defmodule GuayabitaRoll.Entropy do
   Obtiene el root hash del árbol en formato hexadecimal.
   """
   def root_hash(tree) do
-    tree.root.value
+    tree.root.value |> Base.encode16(case: :lower)
   end
 
   # Función helper para Keccak256

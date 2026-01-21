@@ -117,7 +117,7 @@ defmodule GuayabitaRoll.EntropyTest do
 
       # Get proof for index 1
       {:ok, proof, index} = Entropy.generate_proof_by_hash(tree, Enum.at(hashes, 1))
-      root_hash = Entropy.root_hash(tree) |> Base.encode16(case: :lower)
+      root_hash = Entropy.root_hash(tree)  # Already returns hex string
       block = Enum.at(hashes, 1)
 
       assert Entropy.verify_proof(block, index, root_hash, proof) == true
@@ -129,7 +129,7 @@ defmodule GuayabitaRoll.EntropyTest do
       tree = Entropy.build_batch(hashes)
 
       {:ok, proof, _index} = Entropy.generate_proof_by_hash(tree, Enum.at(hashes, 1))
-      root_hash = Entropy.root_hash(tree) |> Base.encode16(case: :lower)
+      root_hash = Entropy.root_hash(tree)  # Already returns hex string
 
       # Try to verify with wrong block (index 0 instead of 1)
       wrong_block = Enum.at(hashes, 0)
@@ -143,7 +143,7 @@ defmodule GuayabitaRoll.EntropyTest do
       tree = Entropy.build_batch(hashes)
 
       {:ok, proof, _index} = Entropy.generate_proof_by_hash(tree, Enum.at(hashes, 1))
-      root_hash = Entropy.root_hash(tree) |> Base.encode16(case: :lower)
+      root_hash = Entropy.root_hash(tree)  # Already returns hex string
       block = Enum.at(hashes, 1)
 
       # Verify with wrong index
@@ -159,8 +159,9 @@ defmodule GuayabitaRoll.EntropyTest do
       root = Entropy.root_hash(tree)
 
       assert is_binary(root)
-      # Root hash should be 32 bytes binary
-      assert byte_size(root) == 32
+      # Root hash should be 64 char hex string (32 bytes encoded)
+      assert String.length(root) == 64
+      assert root =~ ~r/\A[0-9a-f]{64}\z/
     end
 
     test "same inputs produce same root hash" do
