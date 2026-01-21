@@ -15,8 +15,14 @@ defmodule GuayabitaRoll.Application do
       # Start a worker by calling: GuayabitaRoll.Worker.start_link(arg)
       # {GuayabitaRoll.Worker, arg},
       # Start to serve requests, typically the last entry
-      GuayabitaRollWeb.Endpoint
-    ]
+      GuayabitaRollWeb.Endpoint,
+      # Entropy background worker (only in non-test env)
+      if Application.get_env(:backend, :start_entropy_worker, true) do
+        {GuayabitaRoll.Entropy.Worker, []}
+      else
+        :ignore
+      end
+    ] |> Enum.reject(&(&1 == :ignore))
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

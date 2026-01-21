@@ -35,3 +35,6 @@ config :phoenix, :plug_init_mode, :runtime
 # Sort query params output of verified routes for robust url comparisons
 config :phoenix,
   sort_verified_routes_query_params: true
+
+# Disable entropy background worker in tests
+config :backend, start_entropy_worker: false

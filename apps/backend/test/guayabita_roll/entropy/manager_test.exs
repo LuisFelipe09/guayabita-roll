@@ -2,8 +2,6 @@ defmodule GuayabitaRoll.Entropy.ManagerTest do
   use GuayabitaRoll.DataCase, async: false
 
   alias GuayabitaRoll.Entropy.Manager
-  alias GuayabitaRoll.Entropy.{Batch, Seed}
-  alias GuayabitaRoll.Repo
 
   describe "create_batch/1" do
     test "creates a batch with default size (1024 seeds)" do
@@ -135,7 +133,7 @@ defmodule GuayabitaRoll.Entropy.ManagerTest do
 
   describe "available_seeds_count/0" do
     test "counts seeds in published batches only" do
-      {:ok, pending_batch} = Manager.create_batch(16)
+      {:ok, _pending_batch} = Manager.create_batch(16)
       {:ok, published_batch} = Manager.create_batch(32)
       Manager.publish_batch(published_batch, "blob_id")
 
@@ -170,6 +168,71 @@ defmodule GuayabitaRoll.Entropy.ManagerTest do
       # So available = 15, used = 1
       assert result.available_seeds == 15
       assert result.used_seeds == 1
+    end
+  end
+
+  describe "end-to-end merkle proof verification" do
+    test "generated proof can be verified against the batch merkle root" do
+      alias GuayabitaRoll.Entropy
+
+      # 1. Crear un batch
+      {:ok, _batch} = Manager.create_batch(16)
+      
+      # 2. Obtener una semilla
+      {:ok, seed} = Manager.get_any_available_seed()
+      
+      # 3. Generar la prueba
+      {:ok, proof_data} = Manager.generate_proof_for_seed(seed)
+      
+      # 4. VERIFICAR que la prueba es correcta usando el módulo Entropy
+      is_valid = Entropy.verify_proof(
+        proof_data.hash,
+        proof_data.index,
+        proof_data.merkle_root,
+        proof_data.proof
+      )
+      
+      assert is_valid == true
+    end
+
+    test "proof fails verification with wrong hash" do
+      alias GuayabitaRoll.Entropy
+
+      {:ok, _batch} = Manager.create_batch(16)
+      {:ok, seed} = Manager.get_any_available_seed()
+      {:ok, proof_data} = Manager.generate_proof_for_seed(seed)
+      
+      # Intentar verificar con un hash incorrecto
+      wrong_hash = String.duplicate("ab", 32)
+      
+      is_valid = Entropy.verify_proof(
+        wrong_hash,
+        proof_data.index,
+        proof_data.merkle_root,
+        proof_data.proof
+      )
+      
+      assert is_valid == false
+    end
+
+    test "proof fails verification with wrong index" do
+      alias GuayabitaRoll.Entropy
+
+      {:ok, _batch} = Manager.create_batch(16)
+      {:ok, seed} = Manager.get_any_available_seed()
+      {:ok, proof_data} = Manager.generate_proof_for_seed(seed)
+      
+      # Intentar verificar con un índice incorrecto
+      wrong_index = rem(proof_data.index + 1, 16)
+      
+      is_valid = Entropy.verify_proof(
+        proof_data.hash,
+        wrong_index,
+        proof_data.merkle_root,
+        proof_data.proof
+      )
+      
+      assert is_valid == false
     end
   end
 end

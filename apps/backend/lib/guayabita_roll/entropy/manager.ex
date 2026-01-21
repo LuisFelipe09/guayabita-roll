@@ -216,6 +216,18 @@ defmodule GuayabitaRoll.Entropy.Manager do
   end
 
   @doc """
+  Lista los batches que están en estado "pending".
+  """
+  def list_pending_batches do
+    query =
+      from b in Batch,
+        where: b.status == "pending",
+        order_by: [asc: b.inserted_at]
+
+    Repo.all(query)
+  end
+
+  @doc """
   Lista todos los batches con conteo de semillas por estado.
   """
   def list_batches do
