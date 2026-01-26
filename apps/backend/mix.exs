@@ -56,7 +56,8 @@ defmodule GuayabitaRoll.MixProject do
       {:ex_keccak, "~> 0.7.1"},
       {:grpc, "~> 0.8"},
       {:protobuf, "~> 0.12"},
-      {:google_protos, "~> 0.4"}
+      {:google_protos, "~> 0.4"},
+      {:ex_secp256k1, "~> 0.7.2"}
     ]
   end
 
