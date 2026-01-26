@@ -6,7 +6,7 @@ defmodule GuayabitaRoll.Game.Server do
   use GenServer, restart: :transient
 
   require Logger
-  alias GuayabitaRoll.Game.{Engine, State}
+  alias GuayabitaRoll.Game.Engine
 
   # Timeout de inactividad (30 minutos)
   @timeout :timer.minutes(30)
