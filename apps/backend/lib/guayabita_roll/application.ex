@@ -12,6 +12,10 @@ defmodule GuayabitaRoll.Application do
       GuayabitaRoll.Repo,
       {DNSCluster, query: Application.get_env(:backend, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: GuayabitaRoll.PubSub},
+      # Game Process Registry
+      {Registry, keys: :unique, name: GuayabitaRoll.Game.Registry},
+      # Game Dynamic Supervisor
+      GuayabitaRoll.Game.Supervisor,
       # gRPC Client Supervisor for EigenDA connections
       {DynamicSupervisor, strategy: :one_for_one, name: GRPC.Client.Supervisor},
       # Start a worker by calling: GuayabitaRoll.Worker.start_link(arg)
