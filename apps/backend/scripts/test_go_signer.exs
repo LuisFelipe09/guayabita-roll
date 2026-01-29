@@ -23,14 +23,14 @@ IO.puts("📤 Dispersando blob a EigenDA...")
 IO.puts("   Data: #{test_data}")
 IO.puts("   Size: #{byte_size(test_data)} bytes")
 
-case GoSigner.disperse_blob(test_data, private_key) do
+case GoSigner.disperse_blob(test_data) do
   {:ok, blob_key} ->
     IO.puts("\n✅ Blob dispersado exitosamente!")
     IO.puts("   Blob Key: #{Base.encode16(blob_key)}")
     
     IO.puts("\n🔍 Consultando estado del blob...")
     
-    case GoSigner.get_blob_status(blob_key, private_key) do
+    case GoSigner.get_blob_status(blob_key) do
       {:ok, status} ->
         IO.puts("   ✅ Status: #{inspect(status)}")
         

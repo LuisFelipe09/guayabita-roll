@@ -12,21 +12,22 @@ defmodule GuayabitaRoll.EigenDA.GoSigner do
   @doc """
   Disperses a blob to EigenDA using the Go client.
   
+  Reads EIGENDA_PRIVATE_KEY from environment variable.
+  
   ## Parameters
   - data: Binary data to disperse
-  - private_key: Hex-encoded private key (with or without 0x prefix)
   
   ## Returns
   - {:ok, blob_key} on success
   - {:error, reason} on failure
   """
-  def disperse_blob(data, private_key) when is_binary(data) do
+  def disperse_blob(data) when is_binary(data) do
     request = %{
       action: "disperse_blob",
       data: Base.encode16(data, case: :lower)
     }
     
-    case call_go_signer(request, private_key) do
+    case call_go_signer(request) do
       {:ok, %{"success" => true, "blob_key" => blob_key}} ->
         {:ok, Base.decode16!(blob_key, case: :mixed)}
         
@@ -41,21 +42,22 @@ defmodule GuayabitaRoll.EigenDA.GoSigner do
   @doc """
   Gets the status of a blob from EigenDA.
   
+  Reads EIGENDA_PRIVATE_KEY from environment variable.
+  
   ## Parameters
   - blob_key: Binary blob key
-  - private_key: Hex-encoded private key
   
   ## Returns
   - {:ok, status} on success
   - {:error, reason} on failure
   """
-  def get_blob_status(blob_key, private_key) when is_binary(blob_key) do
+  def get_blob_status(blob_key) when is_binary(blob_key) do
     request = %{
       action: "get_blob_status",
       data: Base.encode16(blob_key, case: :lower)
     }
     
-    case call_go_signer(request, private_key) do
+    case call_go_signer(request) do
       {:ok, %{"success" => true}} ->
         {:ok, :complete}
         
@@ -75,15 +77,22 @@ defmodule GuayabitaRoll.EigenDA.GoSigner do
     |> String.replace_prefix("0x", "")
   end
 
-  defp call_go_signer(request, private_key) do
+  defp call_go_signer(request) do
     json_request = Jason.encode!(request) <> "\n"
     
     Logger.debug("[GoSigner] Calling Go signer with action: #{request.action}")
     
+    # Get private key from environment
+    private_key = System.get_env("EIGENDA_PRIVATE_KEY")
+    
+    if !private_key do
+      raise "EIGENDA_PRIVATE_KEY environment variable not set"
+    end
+    
     # Set environment variable for the Go process
     # Must be charlists for Port
     clean_key = clean_private_key(private_key)
-    env = [{'EIGENDA_PRIVATE_KEY', String.to_charlist(clean_key)}]
+    env = [{~c"EIGENDA_PRIVATE_KEY", String.to_charlist(clean_key)}]
     
     port = Port.open({:spawn_executable, @go_binary_path}, [
       :binary,

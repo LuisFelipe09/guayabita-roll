@@ -12,11 +12,6 @@ config :backend,
   ecto_repos: [GuayabitaRoll.Repo],
   generators: [timestamp_type: :utc_datetime, binary_id: true]
 
-# EigenDA Configuration
-# Solo necesitas la private key (la cuenta se deriva de ella)
-config :backend, :eigenda,
-  private_key: System.get_env("EIGENDA_PRIVATE_KEY", "0000000000000000000000000000000000000000000000000000000000000000")
-
 # Configure the endpoint
 config :backend, GuayabitaRollWeb.Endpoint,
   url: [host: "localhost"],

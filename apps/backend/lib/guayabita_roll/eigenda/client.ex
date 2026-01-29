@@ -37,9 +37,7 @@ defmodule GuayabitaRoll.EigenDA.Client do
   - {:error, reason} on failure
   """
   def disperse_blob(data) when is_binary(data) do
-    private_key = get_private_key()
-    
-    case GoSigner.disperse_blob(data, private_key) do
+    case GoSigner.disperse_blob(data) do
       {:ok, blob_key} ->
         Logger.info("[EigenDA] Blob dispersed successfully. Key: #{Base.encode16(blob_key)}")
         {:ok, blob_key}
@@ -61,9 +59,7 @@ defmodule GuayabitaRoll.EigenDA.Client do
   - {:error, reason} on failure
   """
   def get_blob_status(blob_key) when is_binary(blob_key) do
-    private_key = get_private_key()
-    
-    case GoSigner.get_blob_status(blob_key, private_key) do
+    case GoSigner.get_blob_status(blob_key) do
       {:ok, :complete} ->
         {:ok, :complete}
         
@@ -73,15 +69,5 @@ defmodule GuayabitaRoll.EigenDA.Client do
     end
   end
 
-  # Private functions
-
-  defp get_private_key do
-    case System.get_env("EIGENDA_PRIVATE_KEY") do
-      nil ->
-        raise "EIGENDA_PRIVATE_KEY environment variable not set"
-        
-      key ->
-        key
-    end
-  end
+  # Note: get_private_key/0 is no longer needed - GoSigner reads from env directly
 end
