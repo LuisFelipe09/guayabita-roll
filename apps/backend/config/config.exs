@@ -13,9 +13,8 @@ config :backend,
   generators: [timestamp_type: :utc_datetime, binary_id: true]
 
 # EigenDA Configuration
-# Replace these with real values in dev.exs/prod.exs or environment variables
+# Solo necesitas la private key (la cuenta se deriva de ella)
 config :backend, :eigenda,
-  account_id: System.get_env("EIGENDA_ACCOUNT_ID", "0x0000000000000000000000000000000000000000"),
   private_key: System.get_env("EIGENDA_PRIVATE_KEY", "0000000000000000000000000000000000000000000000000000000000000000")
 
 # Configure the endpoint
