@@ -53,10 +53,7 @@ defmodule GuayabitaRoll.MixProject do
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
       {:merkle_tree, "~> 2.0"},
-      {:ex_keccak, "~> 0.7.1"},
-      {:grpc, "~> 0.8"},
-      {:protobuf, "~> 0.12"},
-      {:google_protos, "~> 0.4"}
+      {:ex_keccak, "~> 0.7.1"}
     ]
   end
 
